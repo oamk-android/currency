@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import fi.oamk.exchangeratesapisampleanswer.R
 import fi.oamk.exchangeratesapisampleanswer.ui.theme.ExchangeRatesAPISampleAnswerTheme
+import fi.oamk.exchangeratesapisampleanswer.viewmodel.ExchangeRatesUIState
 import fi.oamk.exchangeratesapisampleanswer.viewmodel.ExchangeRatesViewModel
 
 class MainActivity : ComponentActivity() {
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    CalculatorScreen()
+                    CalculatorApp()
                 }
             }
         }
@@ -37,7 +38,23 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CalculatorScreen(exchangeRatesViewModel: ExchangeRatesViewModel = viewModel()) {
+fun CalculatorApp(exchangeRatesViewModel: ExchangeRatesViewModel = viewModel()) {
+    when (exchangeRatesViewModel.exchangeRatesUIState) {
+        is ExchangeRatesUIState.Success ->
+            CalculatorScreen(
+                eurInput = exchangeRatesViewModel.eurInput,
+                gbp = exchangeRatesViewModel.gbp,
+                changeEur = { exchangeRatesViewModel.changeEur(it) },
+                convert = { exchangeRatesViewModel.convert() }
+            )
+        is ExchangeRatesUIState.Loading -> LoadingScreen()
+        is ExchangeRatesUIState.Error -> ErrorScreen()
+    }
+}
+
+
+@Composable
+fun CalculatorScreen(eurInput: String, gbp: Double,changeEur:(value: String)-> Unit,convert:()->Unit) {
     Column (
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier
@@ -54,23 +71,33 @@ fun CalculatorScreen(exchangeRatesViewModel: ExchangeRatesViewModel = viewModel(
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             label = {Text(text = stringResource(R.string.enter_euros))},
-            value=exchangeRatesViewModel.eurInput,
-            onValueChange = { exchangeRatesViewModel.changeEur(it.replace(',','.')) },
+            value= eurInput,
+            onValueChange = { changeEur(it.replace(',','.')) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
         Text(
-            text = stringResource(R.string.result,String.format("%.2f",exchangeRatesViewModel.gbp)
+            text = stringResource(R.string.result,String.format("%.2f",gbp)
                 .replace(',','.')),
             modifier = Modifier.padding(start = 16.dp)
         )
         Button(
             onClick = {
-                exchangeRatesViewModel.convert()
+                convert()
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(text = stringResource(R.string.calculate))
         }
     }
+}
+
+@Composable
+fun ErrorScreen() {
+    Text("Error retrieving exchange rates. Converter cannot be used.")
+}
+
+@Composable
+fun LoadingScreen() {
+    Text("Loading...")
 }
